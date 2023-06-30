@@ -1,7 +1,7 @@
-# Azure Devops for APIM
-### A set of scripts to use in Azure DevOps for Azure Api Management CI/CD
+# Azure DevOps for APIM
+### A set of scripts to use in Azure DevOps for Azure API Management CI/CD
 
-remember to use apim named values to differentiate the endpoints or other variables between the PRE, BS and PROD environments.
+Please remember to use APIM named values to distinguish the endpoints or other variables between the PRE, BS, and PROD environments.
 
 ![azure devops stages](image.png)
 
@@ -24,6 +24,6 @@ And change the permissions of Project Collection Build Service to Allow - Manage
 
 ![Alt text](image-3.png)
 
-So at the end, the first stage will get the current status of the APIM-PRE and update the Devops Repo, the second stage get the Devops Repo and updates the APIM-BS and the last one get the Devops Repo and updates the APIM-PROD.
+So in the end, the first stage will get the current status of the APIM-PRE and update the Devops Repo, the second stage will get the Devops Repo and updates the APIM-BS and the last one will get the Devops Repo and updates the APIM-PROD.
 
 ![Alt text](image-4.png)
