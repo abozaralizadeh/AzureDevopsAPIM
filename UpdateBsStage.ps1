@@ -13,7 +13,7 @@ $SubscriptionId = (Get-AzContext).Subscription.id
 $ExpiryTimespan = (New-Timespan -Hours 2)
 $KeyType = 'primary'
 
-# Clone from Devops Repo
+# Clone from DevOps Repo
 $exist = Test-Path "${ServiceNamePre}.scm.azure-api.net"
 if ("${exist}" -eq "False") { 
 echo "Doing Clone"
@@ -23,7 +23,7 @@ else {
 echo "Skip Clone"
 }
 
-# Go to folder
+# Go to the folder
 cd $repo_name
 
 # Get the right commit
@@ -31,7 +31,7 @@ git checkout $(ReleaseCommit)
 
 echo "Clone is done!"
 
-# Save tu BS Repo
+# Save to BS Repo
 $apimContextBS = New-AzApiManagementContext -ResourceGroupName $ResourceGroupBS -ServiceName $ServiceNameBS
 
 $context = $apimContextBS
