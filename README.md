@@ -16,6 +16,10 @@ The following variables should be created in the release pipeline and two of the
 - ServiceNameBS
 - ServiceNameProd
 
+Enter the values as plain text, without quotes: the scripts quote them.
+
+Paste each script as the inline script of an Azure PowerShell task in its stage, then edit the placeholders at the top of each script: `$org_name`, `$proj_name` and `$repo_name` (the Azure Repos organization, project and repository used for the clone and push URLs). In `UpdateGitStage.ps1`, also replace `artifact_alias` in `$(Release.Artifacts.artifact_alias.SourceVersion)` with your artifact's alias.
+
 Allow scripts to access the OAuth token should be activated in the agents
 
 ![Alt text](image-2.png)

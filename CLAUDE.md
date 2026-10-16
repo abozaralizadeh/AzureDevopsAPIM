@@ -27,7 +27,7 @@ that stages deployed later in the same release pick up the new values. APIM Git 
 Nothing runs locally: the scripts need an Az PowerShell context (they call `Get-AzContext` and never
 sign in), Az.ApiManagement, git, and Azure DevOps release variables. Each script is meant to be
 pasted as the **inline script** of an Azure PowerShell task (with an Azure service connection) in
-its stage. If PowerShell 7 is installed, a parse-only check (all three parse cleanly) is:
+its stage. If PowerShell 7 is installed, a parse-only check (all three parse cleanly with 7.4) is:
 
 ```bash
 pwsh -NoProfile -Command '$e=$null; foreach ($f in Get-ChildItem *.ps1) { [void][System.Management.Automation.Language.Parser]::ParseFile($f.FullName, [ref]$null, [ref]$e); "$($f.Name): $($e.Count) parse errors" }'
@@ -47,10 +47,11 @@ image*.png            README screenshots (stages, agent option, permissions, sta
 
 - Release pipeline variables: `ReleaseCommit` and `RollBackCommit` (settable at release time),
   `ResourceGroupPre`, `ResourceGroupBS`, `ResourceGroupProd`, `ServiceNamePre`, `ServiceNameBS`,
-  `ServiceNameProd`.
+  `ServiceNameProd`. Values are plain text: the scripts quote them (`$X = "$(X)"`).
 - Placeholders to edit in each script: `$org_name`, `$proj_name`, `$repo_name` (the Azure Repos
-  repo, `<org>.visualstudio.com` URL form), and `artifact_alias` in
-  `$(Release.Artifacts.artifact_alias.SourceVersion)` in `UpdateGitStage.ps1`.
+  repo, `<org>.visualstudio.com` URL form; they build the clone/push URLs and, in BS/Prod, the clone
+  folder), and `artifact_alias` in `$(Release.Artifacts.artifact_alias.SourceVersion)` in
+  `UpdateGitStage.ps1`.
 - Agent job option "Allow scripts to access the OAuth token" (provides `$env:SYSTEM_ACCESSTOKEN`),
   and "Manage releases" = Allow for Project Collection Build Service (for the PUT on the release).
 - The same configuration goes to every instance, so per-environment values (backend URLs etc.)
@@ -60,21 +61,23 @@ image*.png            README screenshots (stages, agent option, permissions, sta
 
 - `$(Name)` is Azure DevOps macro syntax. It is expanded in the inline script text before
   PowerShell runs; it is not expanded inside a script file run by path.
-- Macros sit unquoted on the right of assignments (`$ResourceGroupPre = $(ResourceGroupPre)`).
-  After expansion PowerShell runs a bare value as a command name unless the variable's value
-  carries its own quotes. The error is non-terminating, so the script carries on with an empty
-  variable (checked with PowerShell 7.4).
-- The clone/push URLs use `$(org_name)`, `$(proj_name)`, `$(repo_name)`: macro syntax, not the
-  PowerShell variables set at the top. Without pipeline variables of those names, PowerShell runs
-  them as commands and the URL gets empty segments (`https://<token>@.visualstudio.com//_git/`).
-  `cd $repo_name` does use the PowerShell variable.
-- `UpdateBsStage.ps1` sets `$ResourceGroupBS = $(ResourceGroupPre)`, so the BS stage looks for the
-  BS service in the PRE resource group and the `ResourceGroupBS` variable is never read.
-- In the BS and Prod scripts the "Skip Clone" check tests for the PRE clone folder
-  (`<ServiceNamePre>.scm.azure-api.net`), but the script then `cd`s into `$repo_name`.
-- Every script echoes `$gitUrl`, which embeds the APIM Git token; `UpdateBsStage.ps1` also echoes
-  the password and its URL-encoded form. They are generated at run time, so Azure DevOps does not
-  mask them. Do not add more output like this.
+- Macros on the right of an assignment are inside double quotes
+  (`$ResourceGroupPre = "$(ResourceGroupPre)"`), so the expanded value is a string. Unquoted,
+  PowerShell would run it as a command name (a non-terminating error, then an empty variable). A
+  pipeline variable that is not defined stays as `$(Name)`, which PowerShell still runs as a
+  command, so it ends up empty too.
+- The clone/push URLs use `$($org_name)`, `$($proj_name)`, `$($repo_name)`: PowerShell
+  subexpressions of the placeholders at the top. Azure DevOps leaves them alone (`$org_name` is not
+  a variable name), just like `$($env:SYSTEM_ACCESSTOKEN)`.
+- The APIM Git token (`$gitPassword`) and its URL-encoded form (`$pwUrlencodedLowerCase`) are
+  registered with `Write-Host "##vso[task.setsecret]..."` right after they are created, so the agent
+  masks them in any later log line (the command line itself is masked too). They are generated at
+  run time, so nothing else would mask them. The scripts print only the host
+  (`APIM Git host: <service>.scm.azure-api.net`); never echo `$gitUrl`, `$gitPassword` or
+  `$pwUrlencodedLowerCase` (masking is only a backstop). `$env:SYSTEM_ACCESSTOKEN` is
+  already a secret variable.
+- BS and Prod skip the clone when the `$repo_name` folder already exists. Nothing fetches in that
+  case, so `git checkout $(ReleaseCommit)` only works if that copy already has the commit.
 - All pushes are forced: the Azure Repos branch is replaced by PRE's APIM history, and BS/PROD
   `master` by `ReleaseCommit`. Make changes in PRE; BS and PROD are overwritten on publish.
 - No script reads `RollBackCommit`. It holds the release artifact's source commit; with the

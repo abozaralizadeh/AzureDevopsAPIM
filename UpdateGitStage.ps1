@@ -23,10 +23,10 @@ $repo_name = "my_repo"
 
 $SubscriptionId = (Get-AzContext).Subscription.id
 
-$ResourceGroupPre = $(ResourceGroupPre)
-$ServiceNamePre = $(ServiceNamePre)
-$ResourceGroupProd = $(ResourceGroupProd)
-$ServiceNameProd = $(ServiceNameProd)
+$ResourceGroupPre = "$(ResourceGroupPre)"
+$ServiceNamePre = "$(ServiceNamePre)"
+$ResourceGroupProd = "$(ResourceGroupProd)"
+$ServiceNameProd = "$(ServiceNameProd)"
 
 $ExpiryTimespan = (New-Timespan -Hours 2)
 $KeyType = 'primary'
@@ -48,12 +48,14 @@ $resourceId = '/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.ApiMana
 
 $gitUsername = 'apim'
 $gitPassword = (Invoke-AzResourceAction -Action 'token' -ResourceId $resourceId -Parameters $parameters -ApiVersion '2016-10-10' -Force).Value
+Write-Host "##vso[task.setsecret]$gitPassword"
 
 $pwUrlencodedLowerCase = [System.Web.HttpUtility]::UrlEncode($gitPassword)
+Write-Host "##vso[task.setsecret]$pwUrlencodedLowerCase"
 
 $gitUrl = "https://${gitUsername}:${pwUrlencodedLowerCase}@${ServiceNamePre}.scm.azure-api.net"
 
-echo $gitUrl
+echo "APIM Git host: ${ServiceNamePre}.scm.azure-api.net"
 git clone $gitUrl
 
 # Go to folder
@@ -63,7 +65,7 @@ git pull
 echo "Clone is done!"
 
 # Save tu Devops Repo
-git remote set-url origin https://$($env:SYSTEM_ACCESSTOKEN)@$(org_name).visualstudio.com/$(proj_name)/_git/$(repo_name)
+git remote set-url origin https://$($env:SYSTEM_ACCESSTOKEN)@$($org_name).visualstudio.com/$($proj_name)/_git/$($repo_name)
 git push -f
 
 # memorize the release commit
