@@ -4,20 +4,20 @@ $org_name = "my_org"
 $proj_name = "my_proj"
 $repo_name = "my_repo"
 
-$ResourceGroupPre = $(ResourceGroupPre)
-$ServiceNamePre = $(ServiceNamePre)
-$ResourceGroupProd = $(ResourceGroupProd)
-$ServiceNameProd = $(ServiceNameProd)
+$ResourceGroupPre = "$(ResourceGroupPre)"
+$ServiceNamePre = "$(ServiceNamePre)"
+$ResourceGroupProd = "$(ResourceGroupProd)"
+$ServiceNameProd = "$(ServiceNameProd)"
 
 $SubscriptionId = (Get-AzContext).Subscription.id
 $ExpiryTimespan = (New-Timespan -Hours 2)
 $KeyType = 'primary'
 
 # Save tu DevOps Repo
-$exist = Test-Path "${ServiceNamePre}.scm.azure-api.net"
+$exist = Test-Path "${repo_name}"
 if ("${exist}" -eq "False") { 
 echo "Doing Clone"
-git clone https://$($env:SYSTEM_ACCESSTOKEN)@$(org_name).visualstudio.com/$(proj_name)/_git/$(repo_name)
+git clone https://$($env:SYSTEM_ACCESSTOKEN)@$($org_name).visualstudio.com/$($proj_name)/_git/$($repo_name)
 }
 else {
 echo "Skip Clone"
@@ -45,11 +45,13 @@ $resourceId = '/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.ApiMana
 
 $gitUsername = 'apim'
 $gitPassword = (Invoke-AzResourceAction -Action 'token' -ResourceId $resourceId -Parameters $parameters -ApiVersion '2016-10-10' -Force).Value
+Write-Host "##vso[task.setsecret]$gitPassword"
 
 $pwUrlencodedLowerCase = [System.Web.HttpUtility]::UrlEncode($gitPassword)
+Write-Host "##vso[task.setsecret]$pwUrlencodedLowerCase"
 
 $gitUrl = "https://${gitUsername}:${pwUrlencodedLowerCase}@${ServiceNameProd}.scm.azure-api.net"
-echo $gitUrl
+echo "APIM Git host: ${ServiceNameProd}.scm.azure-api.net"
 
 git remote set-url origin $gitUrl
 git push -f origin $(ReleaseCommit):master
